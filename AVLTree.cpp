@@ -26,10 +26,27 @@ bool AVLTree::isValidId(string id)
     return isDigit;
 }
 
+bool AVLTree::isValidName(string name)
+{
+    bool isCharacters = true;
+
+    for(char c : name)
+    {
+        if(isdigit(c))
+            isCharacters = false;
+    }
+
+    return isCharacters;
+}
+
 void AVLTree::insert(string name, string id)
 {
     //Do error checking/validate here.
-    if(!isValidId(id)) return;
+    if(!isValidId(id) || !isValidName(name))
+    {
+        cout << "unsuccessful";
+        return;
+    }
 
     TreeNode* insertedNode = insertRecursive(head, name, id);
 
@@ -48,10 +65,13 @@ TreeNode* AVLTree::insertRecursive(TreeNode* currentNode, string name, string id
         TreeNode* insertNode =  new TreeNode(name, id);
         insertNode->height = 1;
 
+        //if(head == nullptr)
+        //    head = insertNode;
+
         return insertNode;
     }
 
-    //Keep going
+    //Not leaf, keep going
     int insertID = stoi(id);
     int nodeID = stoi(currentNode->id);
 
@@ -66,120 +86,558 @@ TreeNode* AVLTree::insertRecursive(TreeNode* currentNode, string name, string id
         return currentNode;
     }
 
-    /*
-    //Recurse back
-    //Determine node height after potential insertion
-    int leftHeight = GetChildHeight(currentNode->left);
-    int rightHeight = GetChildHeight(currentNode->right);
-    currentNode->height = 1 + max(leftHeight, rightHeight);
-
-    //Balance
-    int balance = leftHeight - rightHeight;
+    //Inserted, recurring back.
+    int balance = updateHeight(currentNode);
 
     bool leftHeavy = balance > 1;
     bool rightHeavy = balance < -1;
 
-    if(leftHeavy)
+    if(rightHeavy)
     {
-        //Check if should do left left or left right.
-        int leftChildHeight = GetChildHeight(currentNode->left);
-        int rightChildHeight = GetChildHeight(currentNode->right);
+        TreeNode* rightChild = currentNode->right;
+        int rightSubtreeBalance = getHeight(rightChild->left) - getHeight(rightChild->right);
+        bool rightSubtreeLeftHeavy = rightSubtreeBalance == 1;
 
-        bool leftRightHeavy =
+        TreeNode* newRoot;
+
+        if(rightSubtreeLeftHeavy)
+            newRoot = rotateRightLeft(currentNode);
+        else
+            newRoot = rotateLeft(currentNode);
+
+        if(currentNode == head)
+            head = newRoot;
+
+        currentNode = newRoot;
     }
-    else if (rightHeavy)
+    else if (leftHeavy)
     {
+        TreeNode* leftChild = currentNode->left;
+        int leftSubtreeBalance = getHeight(leftChild->left) - getHeight(leftChild->right);
+        bool leftSubtreeRightHeavy = leftSubtreeBalance == -1;
 
+        TreeNode* newRoot;
+
+        if(leftSubtreeRightHeavy)
+            newRoot = rotateLeftRight(currentNode);
+        else
+            newRoot = rotateRight(currentNode);
+
+        if(currentNode == head)
+            head = newRoot;
+
+        currentNode = newRoot;
     }
-    */
 
     return currentNode;
 }
 
-int AVLTree::getChildHeight(TreeNode* childNode)
+//Wrapper for accessing height. If nullptr, return 0.
+int AVLTree::getHeight(TreeNode* node)
 {
-    //Helper that handles if childNode is null.
-
-    if(childNode != nullptr)
-        return childNode->height;
+    if(node != nullptr)
+        return node->height;
     else
         return 0;
 }
 
-void AVLTree::balance(TreeNode* currentNode, int balanceValue)
+//Updates height and returns updated balance. If node is null, return 0.
+int AVLTree::updateHeight(TreeNode* currentNode)
 {
+    if(currentNode == nullptr) return 0;
 
+    int leftHeight = getHeight(currentNode->left);
+    int rightHeight = getHeight(currentNode->right);
+    currentNode->height = 1 + max(leftHeight, rightHeight);
+
+    int balance = leftHeight - rightHeight;
+    return balance;
+}
+
+TreeNode* AVLTree::rotateLeft(TreeNode* node)
+{
+    TreeNode* previousRoot = node;
+    TreeNode* newRoot = previousRoot->right;
+
+    if(newRoot == nullptr) return node;
+
+    TreeNode* nodeShiftedDown = newRoot->left;
+    newRoot->left = previousRoot;
+    previousRoot->right = nodeShiftedDown;
+
+    updateHeight(previousRoot);
+    updateHeight(nodeShiftedDown);
+    updateHeight(newRoot);
+
+    return newRoot;
+}
+
+TreeNode* AVLTree::rotateRight(TreeNode* node)
+{
+    TreeNode* previousRoot = node;
+    TreeNode* newRoot = previousRoot->left;
+
+    if(newRoot == nullptr) return node;
+
+    TreeNode* nodeShiftedDown = newRoot->right;
+    newRoot->right = previousRoot;
+    previousRoot->left = nodeShiftedDown;
+
+    updateHeight(previousRoot);
+    updateHeight(nodeShiftedDown);
+    updateHeight(newRoot);
+
+    return newRoot;
+}
+
+TreeNode* AVLTree::rotateLeftRight(TreeNode* node)
+{
+    TreeNode* subRoot = rotateLeft(node->left);
+    node->left = subRoot;
+
+    TreeNode* newRoot = rotateRight(node);
+
+    return newRoot;
+}
+
+TreeNode* AVLTree::rotateRightLeft(TreeNode* node)
+{
+    TreeNode* subRoot = rotateRight(node->right);
+    node->right = subRoot;
+
+    TreeNode* newRoot = rotateLeft(node);
+
+    return newRoot;
+};
+
+void AVLTree::remove(string id)
+{
+    //Validate here
+    if(!isValidId(id))
+    {
+        cout << "unsuccessful";
+        return;
+    }
+
+    removeIdRecursive(head, id);
+}
+
+TreeNode* AVLTree::removeIdRecursive(TreeNode* currentNode, string id)
+{
+    if(currentNode == nullptr) return currentNode;
+
+    int numId = stoi(id);
+    int nodeId = stoi(currentNode->id);
+
+    if(numId < nodeId)
+        currentNode->left = removeIdRecursive(currentNode->left, id);
+    else if(numId > nodeId)
+        currentNode->right = removeIdRecursive(currentNode->right, id);
+    else if(numId != nodeId && currentNode->left == nullptr && currentNode->right == nullptr)
+    {
+        cout << "unsuccessful";
+        return currentNode;
+    } else
+    {
+        if(currentNode->left == nullptr && currentNode->right == nullptr)
+        {
+            delete currentNode;
+            return nullptr;
+        }
+        else if(currentNode->left == nullptr){
+            TreeNode* rightChild = currentNode->right;
+            delete currentNode;
+            return rightChild;
+        }
+        else if(currentNode->right == nullptr) {
+            TreeNode* leftChild = currentNode->left;
+            delete currentNode;
+            return leftChild;
+        } else //Both children exist
+        {
+            //From lecture notes and from Geeks for Geeks.
+            TreeNode* successorParent = currentNode;
+            TreeNode* successor = currentNode->right;
+
+            while(successor->left != nullptr)
+            {
+                successorParent = successor;
+                successor = successor->left;
+            }
+
+            //Reattach it's parent
+            if(successorParent != currentNode)
+                successorParent->left = successorParent->right;
+            else
+                successorParent->right = successor->right;
+
+            //Replace it with this node
+            successor->left = currentNode->left;
+            successor->right = currentNode->right;
+            delete currentNode;
+            return successor;
+        }
+
+        cout << "successful";
+    }
+
+    return currentNode;
+}
+
+//O(n * log n) could be better by only using remove logic for that node?
+void AVLTree::removeInorder(int index)
+{
+    if(index < 0)
+    {
+        cout << "unsuccessful";
+        return;
+    }
+
+    queue<TreeNode*> preorderNodes;
+    preorder(preorderNodes);
+
+    if(preorderNodes.size() < index)
+        cout << "unsuccessful";
+
+    bool success = false;
+    int i = 0;
+
+    while(i <= index)
+    {
+        preorderNodes.pop();
+        i++;
+    }
+
+    //Remove logic
+    remove(preorderNodes.front()->id);
+}
+
+//O(log n )
+void AVLTree::searchId(string id)
+{
+    if(!isValidId(id))
+    {
+        cout << "unsuccessful";
+        return;
+    }
+
+
+    TreeNode* searchedNode = searchIdRecursive(head, id);
+
+    if(searchedNode != nullptr)
+        cout << searchedNode->name;
+    else
+        cout << "unsuccessful";
+}
+
+//Return Id as string. If not found, returns ""
+string AVLTree::getName(string id)
+{
+    TreeNode* searchedNode = searchIdRecursive(head, id);
+
+    if(searchedNode != nullptr)
+        return searchedNode->name;
+    else
+        return "";
+}
+
+TreeNode* AVLTree::searchIdRecursive(TreeNode* currentNode, string id)
+{
+    if(currentNode == nullptr) return nullptr;
+
+    int numId = stoi(id);
+    int nodeId = stoi(currentNode->id);
+
+    TreeNode* foundNode;
+
+    if(numId < nodeId)
+        foundNode = searchIdRecursive(currentNode->left, id);
+    else if(numId > nodeId)
+        foundNode = searchIdRecursive(currentNode->right, id);
+    else //if equal, found it!
+        foundNode = currentNode;
+
+    return foundNode;
+}
+
+//O(n * name length)
+void AVLTree::searchName(string name)
+{
+    if(!isValidName(name))
+    {
+        cout << "unsuccessful";
+        return;
+    }
+
+    //Pre-order traverse whole tree
+    queue<TreeNode*> allNodes;
+
+    preorder(allNodes);
+
+    bool found = false;
+
+    while(!allNodes.empty())
+    {
+        TreeNode* currentNode = allNodes.front();
+
+        if(currentNode->name == name)
+        {
+            found = true;
+            cout << currentNode->id << endl;
+        }
+
+        allNodes.pop();
+    }
+
+    if(found == false)
+        cout << "unsuccessful";
+}
+
+vector<string> AVLTree::getIds(string name)
+{
+    //Pre-order traverse whole tree
+    vector<string> ids;
+    queue<TreeNode*> allNodes;
+
+    preorder(allNodes);
+
+    while(!allNodes.empty())
+    {
+        TreeNode* currentNode = allNodes.front();
+
+        if(currentNode->name == name)
+            ids.push_back(currentNode->id);
+
+        allNodes.pop();
+    }
+
+    return ids;
 }
 
 void AVLTree::printPreorder()
 {
+    queue<TreeNode*> allNodes;
+
+    preorder(allNodes);
+
+    while (!allNodes.empty())
+    {
+        TreeNode* node = allNodes.front();
+
+        if(allNodes.size() > 1)
+            cout << node->name << ", ";
+        else
+            cout << node->name;
+
+        allNodes.pop();
+    }
+}
+
+void AVLTree::preorder(queue<TreeNode*>& allNodes)
+{
     if(head == nullptr) return;
 
-    printPreorderRecursive(head);
+    preorderRecursive(head, allNodes);
 }
 
 //Preorder - NLR
-void AVLTree::printPreorderRecursive(TreeNode* currentNode)
+void AVLTree::preorderRecursive(TreeNode* currentNode, queue<TreeNode*>& allNodes)
 {
-    cout << currentNode->name << ", ";
+    allNodes.push(currentNode);
 
     if(currentNode->left != nullptr)
-        printPreorderRecursive(currentNode->left);
+        preorderRecursive(currentNode->left, allNodes);
 
     if(currentNode->right != nullptr)
-        printPreorderRecursive(currentNode->right);
+        preorderRecursive(currentNode->right, allNodes);
 }
 
 //O(n)
 void AVLTree::printInorder()
 {
+    queue<TreeNode*> allNodes;
+
+    inorder(allNodes);
+
+    while (!allNodes.empty())
+    {
+        TreeNode* node = allNodes.front();
+
+        if(allNodes.size() > 1)
+            cout << node->name << ", ";
+        else
+            cout << node->name;
+
+        allNodes.pop();
+    }
+}
+
+void AVLTree::inorder(queue<TreeNode*>& allNodes)
+{
     if(head == nullptr) return;
 
-    printInorderRecursive(head);
+    inorderRecursive(head, allNodes);
 }
 
 //Inorder - LNR
-void AVLTree::printInorderRecursive(TreeNode* currentNode)
+void AVLTree::inorderRecursive(TreeNode* currentNode, queue<TreeNode*>& allNodes)
 {
     if(currentNode->left != nullptr)
-        printInorderRecursive(currentNode->left);
+        inorderRecursive(currentNode->left, allNodes);
 
-    cout << currentNode->name << ", ";
+    allNodes.push(currentNode);
 
     if(currentNode->right != nullptr)
-        printInorderRecursive(currentNode->right);
+        inorderRecursive(currentNode->right, allNodes);
 }
 
 //O(n)
 void AVLTree::printPostorder()
 {
+    queue<TreeNode*> allNodes;
+
+    postorder(allNodes);
+
+    while (!allNodes.empty())
+    {
+        TreeNode* node = allNodes.front();
+
+        if(allNodes.size() > 1)
+            cout << node->name << ", ";
+        else
+            cout << node->name;
+
+        allNodes.pop();
+    }
+}
+
+//O(n)
+void AVLTree::deleteAllPostorder()
+{
     if(head == nullptr) return;
 
-    printPostorderRecursive(head);
+    queue<TreeNode*> allNodes;
+
+    postorder(allNodes);
+
+    while(!allNodes.empty())
+    {
+        TreeNode* currentNode = allNodes.front();
+        delete currentNode;
+        allNodes.pop();
+    }
+}
+
+void AVLTree::postorder(queue<TreeNode*>& allNodes)
+{
+    if(head == nullptr) return;
+
+    postorderRecursive(head, allNodes);
 }
 
 //O(n)
 //Postorder - LRN
-void AVLTree::printPostorderRecursive(TreeNode* currentNode)
+void AVLTree::postorderRecursive(TreeNode* currentNode, queue<TreeNode*>& allNodes)
 {
     if(currentNode->left != nullptr)
-        printPostorderRecursive(currentNode->left);
+        postorderRecursive(currentNode->left, allNodes);
 
     if(currentNode->right != nullptr)
-        printPostorderRecursive(currentNode->right);
+        postorderRecursive(currentNode->right, allNodes);
 
-    cout << currentNode->name << ", ";
+    allNodes.push(currentNode);
 }
 
-void AVLTree::printLevelorder(){
+void AVLTree::printLevelorder()
+{
+    queue<pair<TreeNode*, int>> allNodes;
+
+    levelorder(allNodes);
+
+    if(allNodes.empty()) return;
+
+    int level = allNodes.front().second;
+    cout << "Level: " << level << endl;
+
+    while(!allNodes.empty())
+    {
+        TreeNode* currentNode = allNodes.front().first;
+        int currentLevel = allNodes.front().second;
+
+        if(level != currentLevel)
+        {
+            //Next level
+            cout << endl;
+            cout << "Level: " << currentLevel << endl;
+            level = currentLevel;
+        }
+
+        cout << currentNode->name << ", ";
+        allNodes.pop();
+    }
+}
+
+void AVLTree::getNamesInorder(vector<string>& names)
+{
+    queue<TreeNode*> allNodes;
+
+    inorder(allNodes);
+
+    while(!allNodes.empty())
+    {
+        names.push_back(allNodes.front()->name);
+        allNodes.pop();
+    }
+}
+
+void AVLTree::getIdsInorder(vector<string>& ids)
+{
+    queue<TreeNode*> allNodes;
+
+    inorder(allNodes);
+
+    while(!allNodes.empty())
+    {
+        ids.push_back(allNodes.front()->id);
+        allNodes.pop();
+    }
+}
+
+void AVLTree::getNamesLevelorder(vector<string>& names)
+{
+    queue<pair<TreeNode*, int>> allNodes;
+
+    levelorder(allNodes);
+
+    while(!allNodes.empty())
+    {
+        names.push_back(allNodes.front().first->name);
+        allNodes.pop();
+    }
+}
+
+void AVLTree::getIdsLevelorder(vector<string>& ids)
+{
+    queue<pair<TreeNode*, int>> allNodes;
+
+    levelorder(allNodes);
+
+    while(!allNodes.empty())
+    {
+        ids.push_back(allNodes.front().first->id);
+        allNodes.pop();
+    }
+}
+
+void AVLTree::levelorder(queue<pair<TreeNode*, int>>& allNodes)
+{
+    if(head == nullptr) return;
+
     int currentLevel = 1;
 
     queue<TreeNode*> levelNodesQ;
-
     levelNodesQ.push(head);
-
-    cout << "Level: " << currentLevel << endl;
-    cout << head->name << " " << endl;
+    allNodes.push(make_pair(head, currentLevel));
 
     currentLevel++;
 
@@ -194,52 +652,33 @@ void AVLTree::printLevelorder(){
 
             if(currentNode->left != nullptr)
             {
-                if(!displayedLevel)
-                {
-                    cout << "Level: " << currentLevel << endl;
-                    displayedLevel = true;
-                }
-
                 levelNodesQ.push(currentNode->left);
-                cout << currentNode->left->name << " ";
+                allNodes.push(make_pair(currentNode->left, currentLevel));
             }
 
             if(currentNode->right != nullptr)
             {
-                if(!displayedLevel)
-                {
-                    cout << "Level: " << currentLevel << endl;
-                    displayedLevel = true;
-                }
-
                 levelNodesQ.push(currentNode->right);
-                cout << currentNode->right->name << " ";
+                allNodes.push(make_pair(currentNode->right, currentLevel));
             }
 
             levelNodesQ.pop();
         }
 
         currentLevel++;
-        cout << endl;
     }
 }
 
-//O(n)
-void AVLTree::deleteAllPostorder()
+void AVLTree::printLevelCount()
 {
-    if(head == nullptr) return;
+    int height = getHeight(head);
 
-    deletePostorderRecursive(head);
+    cout << height << endl;
 }
 
-void AVLTree::deletePostorderRecursive(TreeNode* currentNode)
+int AVLTree::getLevelCount()
 {
-    if(currentNode->left != nullptr)
-        deletePostorderRecursive(currentNode->left);
+    if(head == nullptr) return 0;
 
-    if(currentNode->right != nullptr)
-        deletePostorderRecursive(currentNode->right);
-
-    delete currentNode;
+    return getHeight(head);
 }
-

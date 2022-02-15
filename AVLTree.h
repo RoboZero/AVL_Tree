@@ -5,8 +5,9 @@
 #ifndef PROJECTS_AVLTREE_H
 #define PROJECTS_AVLTREE_H
 
-#include<iostream>
-#include<queue>
+#include <iostream>
+#include <queue>
+#include <vector>
 #include "TreeNode.h"
 
 using namespace std;
@@ -17,20 +18,30 @@ class AVLTree {
 private:
     TreeNode* head;
 
-    int getChildHeight(TreeNode* currentNode);
-    bool isValidId(string id);
-    void balance(TreeNode* currentNode, int balanceValue);
+    int getHeight(TreeNode* currentNode);
+    int updateHeight(TreeNode* currentNode);
 
-    TreeNode* rotateRight(TreeNode node);
-    TreeNode* rotateLeft(TreeNode node);
+    bool isValidName(string name);
+    bool isValidId(string id);
+
+    TreeNode* rotateRight(TreeNode* node);
+    TreeNode* rotateLeft(TreeNode* node);
+    TreeNode* rotateLeftRight(TreeNode* node);
+    TreeNode* rotateRightLeft(TreeNode* node);
 
     TreeNode* insertRecursive(TreeNode* currentNode, string name, string id);
+    TreeNode* searchIdRecursive(TreeNode* currentNode, string id);
+    TreeNode* removeIdRecursive(TreeNode* currentNode, string id);
     void deleteAllPostorder();
 
-    void printPreorderRecursive(TreeNode* currentNode);
-    void printInorderRecursive(TreeNode* currentNode);
-    void printPostorderRecursive(TreeNode* currentNode);
-    void deletePostorderRecursive(TreeNode* currentNode);
+    void preorder(queue<TreeNode*>& allNodes);
+    void inorder(queue<TreeNode*>& allNodes);
+    void postorder(queue<TreeNode*>& allNodes);
+    void levelorder(queue<pair<TreeNode*, int>>& allNodes);
+
+    void preorderRecursive(TreeNode* currentNode, queue<TreeNode*>& allNodes);
+    void inorderRecursive(TreeNode* currentNode, queue<TreeNode*>& allNodes);
+    void postorderRecursive(TreeNode* currentNode, queue<TreeNode*>& allNodes);
 
 public:
     AVLTree();
@@ -38,8 +49,10 @@ public:
 
     void insert(string name, string id);
     void remove(string id);
-    void searchID(string id);
+    void searchId(string id);
     void searchName(string name);
+    string getName(string id);
+    vector<string> getIds(string name);
 
     void printInorder();
     void printPreorder();
@@ -48,6 +61,13 @@ public:
     void printLevelCount();
 
     void removeInorder(int index);
+
+    //For testing, but works on it's own.
+    void getNamesInorder(vector<string>& names);
+    void getIdsInorder(vector<string>& ids);
+    void getNamesLevelorder(vector<string>& names);
+    void getIdsLevelorder(vector<string>& ids);
+    int getLevelCount();
 };
 
 
